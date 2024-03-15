@@ -1,19 +1,17 @@
 使用golang实现的tcp udp端口转发
 
+Fork https://github.com/csznet/goForward
+
 目前已实现：
 
  - 规则热加载
  - web管理面板
  - 流量统计
+ - 空闲时长设置
 
 **截图**
 
-```
-	// 设置连接读写超时时间
-	clientConn.SetReadDeadline(time.Now().Add(time.Duration(5) * time.Second))
-	clientConn.SetWriteDeadline(time.Now().Add(time.Duration(5) * time.Second))
-	
-```
+![image](https://github.com/xieyuhua/portforward/assets/29120060/7a9355d7-b63e-495b-808d-5c262441e159)
 
 
 **使用**

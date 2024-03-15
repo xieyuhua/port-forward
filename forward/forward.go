@@ -102,8 +102,8 @@ func Run(stats *ConnectionStats, wg *sync.WaitGroup) {
 			for {
 				select {
 				case stopPort := <-conf.Ch:
-				// 	fmt.Println("通道信息:" + stopPort)
-				// 	fmt.Println("当前端口:" + stats.LocalPort)
+					//fmt.Println("通道信息:" + stopPort)
+					//fmt.Println("当前端口:" + stats.LocalPort)
 					if stopPort == stats.LocalPort+stats.Protocol {
 						fmt.Printf("【%s】停止监听端口 %s\n", stats.Protocol, stats.LocalPort)
 						listener.Close()
@@ -142,10 +142,6 @@ func Run(stats *ConnectionStats, wg *sync.WaitGroup) {
 func (cs *ConnectionStats) handleTCPConnection(wg *sync.WaitGroup, clientConn net.Conn, ctx context.Context) {
 	defer wg.Done()
 	defer clientConn.Close()
-
-	// 设置连接读写超时时间
-// 	clientConn.SetReadDeadline(time.Now().Add(time.Duration(50) * time.Second))
-// 	clientConn.SetWriteDeadline(time.Now().Add(time.Duration(50) * time.Second))
 
 	remoteConn, err := net.Dial("tcp", cs.RemoteAddr+":"+cs.RemotePort)
 	if err != nil {
@@ -287,16 +283,17 @@ func (cs *ConnectionStats) printStats(wg *sync.WaitGroup, ctx context.Context) {
 				fmt.Printf("【%s】端口 %s 当前连接数: %d\n", cs.Protocol, cs.LocalPort, len(cs.TCPConnections))
 			} else {
 				if cs.Protocol == "tcp" {
-					cs.TcpTime = cs.TcpTime + 5
-				// 	fmt.Printf("【%s】端口 %s 当前超时秒: %d\n", cs.Protocol, cs.LocalPort, cs.TcpTime)
+					// fmt.Printf("【%s】端口 %s 当前超时秒: %d\n", cs.Protocol, cs.LocalPort, cs.TcpTime)
 					if cs.OutTime>1 && cs.TcpTime >= cs.OutTime {
-				// 		fmt.Printf("【%s】端口 %s 超时关闭  %v s \n", cs.Protocol, cs.LocalPort, cs.OutTime)
+						// fmt.Printf("【%s】端口 %s 超时关闭\n", cs.Protocol, cs.LocalPort)
 						for i := len(cs.TCPConnections) - 1; i >= 0; i-- {
 							conn := cs.TCPConnections[i]
 							conn.Close()
 							// 从连接列表中移除关闭的连接
 							cs.TCPConnections = append(cs.TCPConnections[:i], cs.TCPConnections[i+1:]...)
 						}
+					} else {
+						cs.TcpTime = cs.TcpTime + 5
 					}
 				}
 			}
