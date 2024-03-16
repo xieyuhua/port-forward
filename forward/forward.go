@@ -23,6 +23,8 @@ type ConnectionStats struct {
 	TcpTime        int        `gorm:"-"` // TCP无传输时间
 }
 
+var bandwidthMap = make(map[string]string)
+
 // 保存多个连接信息
 type LargeConnectionStats struct {
 	Connections []*ConnectionStats `json:"connections"`
@@ -143,6 +145,11 @@ func (cs *ConnectionStats) handleTCPConnection(wg *sync.WaitGroup, clientConn ne
 	defer wg.Done()
 	defer clientConn.Close()
 
+	// 设置连接读写超时时间
+// 	clientConn.SetReadDeadline(time.Now().Add(time.Duration(5) * time.Second))
+// 	clientConn.SetWriteDeadline(time.Now().Add(time.Duration(5) * time.Second))
+
+
 	remoteConn, err := net.Dial("tcp", cs.RemoteAddr+":"+cs.RemotePort)
 	if err != nil {
 		fmt.Println("连接远程地址时发生错误:", err)
@@ -150,7 +157,23 @@ func (cs *ConnectionStats) handleTCPConnection(wg *sync.WaitGroup, clientConn ne
 	}
 	defer remoteConn.Close()
 
+    srcremoteAddr := clientConn.RemoteAddr()  
+    srctcpAddr, _ := srcremoteAddr.(*net.TCPAddr)
+    srctcpAddrstr := fmt.Sprintf("%v:%v", srctcpAddr.IP, srctcpAddr.Port)
+    
+    
+    dstremoteAddr := remoteConn.RemoteAddr()  
+    dsttcpAddr, _ := dstremoteAddr.(*net.TCPAddr)
+    dsttcpAddrstr := fmt.Sprintf("%v:%v", dsttcpAddr.IP, dsttcpAddr.Port)   
+    
+
+    cs.TotalBytesLock.Lock()  
+    bandwidthMap[srctcpAddrstr] = dsttcpAddrstr
+    cs.TotalBytesLock.Unlock()
+		    
+
 	cs.TCPConnections = append(cs.TCPConnections, clientConn, remoteConn) // 添加连接到列表
+// 	cs.TCPConnections = append(cs.TCPConnections, clientConn) // 添加连接到列表
 	var copyWG sync.WaitGroup
 	copyWG.Add(2)
 
@@ -222,15 +245,41 @@ func (cs *ConnectionStats) forwardUDPMessage(localConn *net.UDPConn, remoteAddr 
 func (cs *ConnectionStats) copyBytes(dst, src net.Conn) {
 	buf := bufPool.Get().([]byte)
 	defer bufPool.Put(buf)
+	
+	
+    srcremoteAddr := src.RemoteAddr()  
+    srctcpAddr, _ := srcremoteAddr.(*net.TCPAddr)
+    srctcpAddrstr := fmt.Sprintf("%v:%v", srctcpAddr.IP, srctcpAddr.Port)
+    
+    
+    // dstremoteAddr := dst.RemoteAddr()  
+    // dsttcpAddr, _ := dstremoteAddr.(*net.TCPAddr)
+    // dsttcpAddrstr := fmt.Sprintf("%v:%v", dsttcpAddr.IP, dsttcpAddr.Port)   
+    
 	for {
+	    //从源读取
 		n, err := src.Read(buf)
 		if n > 0 {
+	   //     cs.TotalBytesLock.Lock()  
+		  //  bandwidthMap[srctcpAddrstr] = time.Now().Unix()
+		  //  cs.TotalBytesLock.Unlock()
+		    
+		    if cs.OutTime>1 {
+            //	设置连接读写超时时间
+            	dst.SetReadDeadline(time.Now().Add(time.Duration(cs.OutTime) * time.Second))
+            	dst.SetWriteDeadline(time.Now().Add(time.Duration(cs.OutTime) * time.Second))
+		    }
+		    
 			cs.TotalBytesLock.Lock()
 			cs.TotalBytes += uint64(n)
 			cs.TotalBytesLock.Unlock()
-
+            
+            //写入目标
 			_, err := dst.Write(buf[:n])
 			if err != nil {
+			 //   cs.TotalBytesLock.Lock()  
+			 //   delete(bandwidthMap, dsttcpAddrstr)
+			 //   cs.TotalBytesLock.Unlock()  
 				fmt.Println("写入目标时发生错误:", err)
 				break
 			}
@@ -241,6 +290,9 @@ func (cs *ConnectionStats) copyBytes(dst, src net.Conn) {
 		}
 
 		if err != nil {
+		    cs.TotalBytesLock.Lock()  
+		    delete(bandwidthMap, srctcpAddrstr)
+		    cs.TotalBytesLock.Unlock()  
 			fmt.Println("从源读取时发生错误:", err)
 			break
 		}
@@ -260,6 +312,7 @@ func (cs *ConnectionStats) printStats(wg *sync.WaitGroup, ctx context.Context) {
 		select {
 		case <-ticker.C:
 			cs.TotalBytesLock.Lock()
+			
 			if cs.TotalBytes > cs.TotalBytesOld {
 				if cs.Protocol == "tcp" {
 					cs.TcpTime = 0
@@ -280,22 +333,13 @@ func (cs *ConnectionStats) printStats(wg *sync.WaitGroup, ctx context.Context) {
 				}
 				cs.TotalBytesOld = cs.TotalBytes
 				sql.UpdateForwardBytes(cs.Id, cs.TotalBytes)
-				fmt.Printf("【%s】端口 %s 当前连接数: %d\n", cs.Protocol, cs.LocalPort, len(cs.TCPConnections))
-			} else {
-				if cs.Protocol == "tcp" {
-					// fmt.Printf("【%s】端口 %s 当前超时秒: %d\n", cs.Protocol, cs.LocalPort, cs.TcpTime)
-					if cs.OutTime>1 && cs.TcpTime >= cs.OutTime {
-						// fmt.Printf("【%s】端口 %s 超时关闭\n", cs.Protocol, cs.LocalPort)
-						for i := len(cs.TCPConnections) - 1; i >= 0; i-- {
-							conn := cs.TCPConnections[i]
-							conn.Close()
-							// 从连接列表中移除关闭的连接
-							cs.TCPConnections = append(cs.TCPConnections[:i], cs.TCPConnections[i+1:]...)
-						}
-					} else {
-						cs.TcpTime = cs.TcpTime + 5
-					}
+				fmt.Printf("【%s】端口 %s 当前连接数: %d\n", cs.Protocol, cs.LocalPort, len(bandwidthMap))
+				
+				//当前连接数
+				for index, ips := range bandwidthMap {
+				    fmt.Printf("【%s】端口  %s -> %v \n", cs.LocalPort, index, ips)
 				}
+            				
 			}
 			cs.TotalBytesLock.Unlock()
 		//当协程退出时执行

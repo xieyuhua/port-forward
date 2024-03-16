@@ -17,6 +17,10 @@ import (
 )
 
 func Run() {
+    // [GIN-debug] [WARNING] Running in "debug" mode. Switch to "release" mode in production.
+    //  - using env:   export GIN_MODE=release
+    //  - using code:  gin.SetMode(gin.ReleaseMode)
+     
 	gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 	store := cookie.NewStore([]byte("secret"))
