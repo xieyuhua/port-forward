@@ -42,6 +42,7 @@ func main() {
 			},
 			TotalBytesOld:  forwardList[i].TotalBytes,
 			TotalBytesLock: sync.Mutex{},
+			TCPConnections: make(map[string]*forward.IPStruct), 
 		}
 
 		largeStats.Connections[i] = connectionStats

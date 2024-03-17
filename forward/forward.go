@@ -15,16 +15,21 @@ import (
 	"goForward/sql"
 )
 
+type IPStruct struct {
+	Time        int64        `gorm:"-"`
+	TCPConnections net.Conn  `gorm:"-"`
+}
+
 type ConnectionStats struct {
 	conf.ConnectionStats
 	TotalBytesOld  uint64     `gorm:"-"`
 	TotalBytesLock sync.Mutex `gorm:"-"`
-	TCPConnections []net.Conn `gorm:"-"` // 用于存储 TCP 连接
+	TCPConnections map[string]*IPStruct `gorm:"-"` // 用于存储 TCP 连接
 	TcpTime        int        `gorm:"-"` // TCP无传输时间
 }
 
-var bandwidthMap = make(map[string]string)
 
+var Timestr string
 // 保存多个连接信息
 type LargeConnectionStats struct {
 	Connections []*ConnectionStats `json:"connections"`
@@ -112,7 +117,7 @@ func Run(stats *ConnectionStats, wg *sync.WaitGroup) {
 						cancel()
 						// 遍历并关闭所有 TCP 连接
 						for _, conn := range stats.TCPConnections {
-							conn.Close()
+							conn.TCPConnections.Close()
 						}
 						return
 					} else {
@@ -145,11 +150,6 @@ func (cs *ConnectionStats) handleTCPConnection(wg *sync.WaitGroup, clientConn ne
 	defer wg.Done()
 	defer clientConn.Close()
 
-	// 设置连接读写超时时间
-// 	clientConn.SetReadDeadline(time.Now().Add(time.Duration(5) * time.Second))
-// 	clientConn.SetWriteDeadline(time.Now().Add(time.Duration(5) * time.Second))
-
-
 	remoteConn, err := net.Dial("tcp", cs.RemoteAddr+":"+cs.RemotePort)
 	if err != nil {
 		fmt.Println("连接远程地址时发生错误:", err)
@@ -157,23 +157,7 @@ func (cs *ConnectionStats) handleTCPConnection(wg *sync.WaitGroup, clientConn ne
 	}
 	defer remoteConn.Close()
 
-    srcremoteAddr := clientConn.RemoteAddr()  
-    srctcpAddr, _ := srcremoteAddr.(*net.TCPAddr)
-    srctcpAddrstr := fmt.Sprintf("%v:%v", srctcpAddr.IP, srctcpAddr.Port)
-    
-    
-    dstremoteAddr := remoteConn.RemoteAddr()  
-    dsttcpAddr, _ := dstremoteAddr.(*net.TCPAddr)
-    dsttcpAddrstr := fmt.Sprintf("%v:%v", dsttcpAddr.IP, dsttcpAddr.Port)   
-    
-
-    cs.TotalBytesLock.Lock()  
-    bandwidthMap[srctcpAddrstr] = dsttcpAddrstr
-    cs.TotalBytesLock.Unlock()
-		    
-
-	cs.TCPConnections = append(cs.TCPConnections, clientConn, remoteConn) // 添加连接到列表
-// 	cs.TCPConnections = append(cs.TCPConnections, clientConn) // 添加连接到列表
+// 	cs.TCPConnections = append(cs.TCPConnections, clientConn, remoteConn) // 添加连接到列表
 	var copyWG sync.WaitGroup
 	copyWG.Add(2)
 
@@ -252,35 +236,30 @@ func (cs *ConnectionStats) copyBytes(dst, src net.Conn) {
     srctcpAddrstr := fmt.Sprintf("%v:%v", srctcpAddr.IP, srctcpAddr.Port)
     
     
-    // dstremoteAddr := dst.RemoteAddr()  
-    // dsttcpAddr, _ := dstremoteAddr.(*net.TCPAddr)
-    // dsttcpAddrstr := fmt.Sprintf("%v:%v", dsttcpAddr.IP, dsttcpAddr.Port)   
+    dstremoteAddr := dst.RemoteAddr()  
+    dsttcpAddr, _ := dstremoteAddr.(*net.TCPAddr)
+    dsttcpAddrstr := fmt.Sprintf("%v:%v", dsttcpAddr.IP, dsttcpAddr.Port)   
+    
     
 	for {
 	    //从源读取
 		n, err := src.Read(buf)
-		if n > 0 {
-	   //     cs.TotalBytesLock.Lock()  
-		  //  bandwidthMap[srctcpAddrstr] = time.Now().Unix()
-		  //  cs.TotalBytesLock.Unlock()
-		    
-		    if cs.OutTime>1 {
-            //	设置连接读写超时时间
-            	dst.SetReadDeadline(time.Now().Add(time.Duration(cs.OutTime) * time.Second))
-            	dst.SetWriteDeadline(time.Now().Add(time.Duration(cs.OutTime) * time.Second))
-		    }
-		    
-			cs.TotalBytesLock.Lock()
+		if n > 0 { 
+		    cs.TotalBytesLock.Lock()
+		    cs.TCPConnections[srctcpAddrstr+"->"+dsttcpAddrstr] = &IPStruct{Time:time.Now().Unix(), TCPConnections:src}
 			cs.TotalBytes += uint64(n)
 			cs.TotalBytesLock.Unlock()
-            
             //写入目标
 			_, err := dst.Write(buf[:n])
-			if err != nil {
-			 //   cs.TotalBytesLock.Lock()  
-			 //   delete(bandwidthMap, dsttcpAddrstr)
-			 //   cs.TotalBytesLock.Unlock()  
-				fmt.Println("写入目标时发生错误:", err)
+			if err != nil { 
+    		    cs.TotalBytesLock.Lock()
+    	        src.Close()
+    	        dst.Close()
+    	        delete(cs.TCPConnections, dsttcpAddrstr +"->"+srctcpAddrstr)
+    	        delete(cs.TCPConnections, srctcpAddrstr +"->"+dsttcpAddrstr)
+    	        cs.TotalBytesLock.Unlock()
+			    Timestr = time.Unix(time.Now().Unix(), 0).Format("2006-01-02 15:04:05")
+				fmt.Println("%v 写入目标时发生错误: %v \n",Timestr, err)
 				break
 			}
 		}
@@ -288,12 +267,16 @@ func (cs *ConnectionStats) copyBytes(dst, src net.Conn) {
 		if err == io.EOF {
 			break
 		}
-
-		if err != nil {
-		    cs.TotalBytesLock.Lock()  
-		    delete(bandwidthMap, srctcpAddrstr)
-		    cs.TotalBytesLock.Unlock()  
-			fmt.Println("从源读取时发生错误:", err)
+		
+		if err != nil { 
+		    cs.TotalBytesLock.Lock()
+	        src.Close()
+	        dst.Close()
+	        delete(cs.TCPConnections, dsttcpAddrstr +"->"+srctcpAddrstr)
+	        delete(cs.TCPConnections, srctcpAddrstr +"->"+dsttcpAddrstr)
+	        cs.TotalBytesLock.Unlock()
+		    Timestr = time.Unix(time.Now().Unix(), 0).Format("2006-01-02 15:04:05")
+			fmt.Printf("%v 从源读取时发生错误: %v \n",Timestr, err)
 			break
 		}
 	}
@@ -323,7 +306,6 @@ func (cs *ConnectionStats) printStats(wg *sync.WaitGroup, ctx context.Context) {
 				} else {
 					total = strconv.FormatFloat(float64(cs.TotalBytes)/(1024*1024), 'f', 2, 64) + "MB"
 				}
-				fmt.Printf("【%s】端口 %s 统计流量: %s\n", cs.Protocol, cs.LocalPort, total)
 				//统计更换单位
 				var gb uint64 = 1073741824
 				if cs.TotalBytes >= gb {
@@ -333,13 +315,25 @@ func (cs *ConnectionStats) printStats(wg *sync.WaitGroup, ctx context.Context) {
 				}
 				cs.TotalBytesOld = cs.TotalBytes
 				sql.UpdateForwardBytes(cs.Id, cs.TotalBytes)
-				fmt.Printf("【%s】端口 %s 当前连接数: %d\n", cs.Protocol, cs.LocalPort, len(bandwidthMap))
 				
-				//当前连接数
-				for index, ips := range bandwidthMap {
-				    fmt.Printf("【%s】端口  %s -> %v \n", cs.LocalPort, index, ips)
+				Timestr = time.Unix( time.Now().Unix(), 0).Format("2006-01-02 15:04:05")
+				fmt.Printf("%v 【%s】端口 %s 当前连接数: %d, 统计流量: %s\n", Timestr, cs.Protocol, cs.LocalPort, len(cs.TCPConnections), total)
+				i := 1
+				for index, _ := range cs.TCPConnections {
+				    // cs.RemotePort cs.RemoteAddr
+			        fmt.Printf("%v 【%s】端口 %v、  %s  \n",Timestr, cs.LocalPort, i , index)
+			        i++
 				}
-            				
+			}else{
+			    times := time.Now().Unix()
+				for index, ips := range cs.TCPConnections {
+				    //最大空闲连接丢弃
+				    if cs.OutTime>1 && int(times-ips.Time)>cs.OutTime {
+				        ips.TCPConnections.Close()
+				        fmt.Printf("%v 【%s】端口 Close %s  \n",Timestr, cs.LocalPort, index)
+				        delete(cs.TCPConnections, index)
+				    }
+				}	
 			}
 			cs.TotalBytesLock.Unlock()
 		//当协程退出时执行
@@ -354,7 +348,7 @@ func closeTCPConnections(stats *ConnectionStats) {
 	stats.TotalBytesLock.Lock()
 	defer stats.TotalBytesLock.Unlock()
 	for _, conn := range stats.TCPConnections {
-		conn.Close()
+		conn.TCPConnections.Close()
 	}
 	stats.TCPConnections = nil // 清空切片
 }

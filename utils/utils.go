@@ -27,6 +27,7 @@ func AddForward(newF conf.ConnectionStats) bool {
 			},
 			TotalBytesOld:  0,
 			TotalBytesLock: sync.Mutex{},
+			TCPConnections: make(map[string]*forward.IPStruct),
 		}
 		conf.Wg.Add(1)
 		go forward.Run(stats, &conf.Wg)
@@ -62,6 +63,7 @@ func ExStatus(f conf.ConnectionStats) bool {
 				},
 				TotalBytesOld:  f.TotalBytes,
 				TotalBytesLock: sync.Mutex{},
+				TCPConnections: make(map[string]*forward.IPStruct), 
 			}
 			conf.Wg.Add(1)
 			go forward.Run(stats, &conf.Wg)
