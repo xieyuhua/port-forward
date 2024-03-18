@@ -241,6 +241,7 @@ func (cs *ConnectionStats) copyBytes(dst, src net.Conn) {
     dsttcpAddrstr := fmt.Sprintf("%v:%v", dsttcpAddr.IP, dsttcpAddr.Port)   
     
     
+    // 长连接时候，中断，数据丢失，重连
 	for {
 	    //从源读取
 		n, err := src.Read(buf)
@@ -368,5 +369,5 @@ func cleanupBuffer() {
 // 释放资源
 func releaseResources(stats *ConnectionStats) {
 	closeTCPConnections(stats)
-	cleanupBuffer()
+// 	cleanupBuffer()
 }
