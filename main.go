@@ -60,5 +60,6 @@ func main() {
 func init() {
 	flag.StringVar(&conf.WebPort, "port", "8889", "Web Port")
 	flag.StringVar(&conf.WebPass, "pass", "", "Web Password")
+	flag.BoolVar(&conf.Debug, "debug", false, "Print connection")
 	flag.Parse()
 }

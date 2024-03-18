@@ -23,7 +23,15 @@ Fork https://github.com/csznet/goForward
 
 运行
 ```
-./goForward
+./goForward -h
+
+  -debug
+    	Print connection
+  -pass string
+    	Web Password
+  -port string
+    	Web Port (default "8889")
+
 ```
 
 **参数**

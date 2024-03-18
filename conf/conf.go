@@ -35,3 +35,5 @@ var WebPort string
 
 // Web管理面板密码
 var WebPass string
+
+var Debug bool

@@ -319,19 +319,22 @@ func (cs *ConnectionStats) printStats(wg *sync.WaitGroup, ctx context.Context) {
 				
 				Timestr = time.Unix( time.Now().Unix(), 0).Format("2006-01-02 15:04:05")
 				fmt.Printf("%v 【%s】端口 %s 当前连接数: %d, 统计流量: %s\n", Timestr, cs.Protocol, cs.LocalPort, len(cs.TCPConnections), total)
-				i := 1
-				for index, _ := range cs.TCPConnections {
-				    // cs.RemotePort cs.RemoteAddr
-			        fmt.Printf("%v 【%s】端口 %v、  %s  \n",Timestr, cs.LocalPort, i , index)
-			        i++
+				if conf.Debug {
+    				i := 1
+    				for index, _ := range cs.TCPConnections {
+    				    // cs.RemotePort cs.RemoteAddr
+    			        fmt.Printf("%v 【%s】端口 %v、  %s  \n",Timestr, cs.LocalPort, i , index)
+    			        i++
+    				}
 				}
+
 			}else{
 			    times := time.Now().Unix()
 				for index, ips := range cs.TCPConnections {
 				    //最大空闲连接丢弃
 				    if cs.OutTime>1 && int(times-ips.Time)>cs.OutTime {
 				        ips.TCPConnections.Close()
-				        fmt.Printf("%v 【%s】端口 Close %s  \n",Timestr, cs.LocalPort, index)
+				        fmt.Printf("%v 【%s】端口 超时 Close %s  \n",Timestr, cs.LocalPort, index)
 				        delete(cs.TCPConnections, index)
 				    }
 				}	
