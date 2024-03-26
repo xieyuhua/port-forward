@@ -9,7 +9,7 @@ Fork https://github.com/csznet/goForward
  - 流量统计
  - 空闲时长断开连接设置
  - 端口白名单、黑名单配置
- - 
+ 
 **截图**
 
 ![image](https://github.com/xieyuhua/port-forward/assets/29120060/834cabc3-e461-4adb-a3eb-d8220fac9f5f)
