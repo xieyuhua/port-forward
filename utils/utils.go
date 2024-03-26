@@ -1,12 +1,13 @@
 package utils
 
 import (
-	"sync"
+	"sync"  
 
 	"goForward/conf"
 	"goForward/forward"
 	"goForward/sql"
 )
+
 
 // 增加转发并开启
 func AddForward(newF conf.ConnectionStats) bool {
@@ -21,6 +22,8 @@ func AddForward(newF conf.ConnectionStats) bool {
 				LocalPort:  newF.LocalPort,
 				RemotePort: newF.RemotePort,
 				RemoteAddr: newF.RemoteAddr,
+				Blacklist:  newF.Blacklist,
+				Whitelist:  newF.Whitelist,
 				Protocol:   newF.Protocol,
 				OutTime:    newF.OutTime,
 				TotalBytes: 0,
@@ -57,6 +60,8 @@ func ExStatus(f conf.ConnectionStats) bool {
 					LocalPort:  f.LocalPort,
 					RemotePort: f.RemotePort,
 					RemoteAddr: f.RemoteAddr,
+					Blacklist:  f.Blacklist,
+					Whitelist:  f.Whitelist,
 					Protocol:   f.Protocol,
 					OutTime:    f.OutTime,
 					TotalBytes: f.TotalBytes,

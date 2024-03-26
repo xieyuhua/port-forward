@@ -46,6 +46,8 @@ func Run() {
 				LocalPort:  c.PostForm("localPort"),
 				RemotePort: c.PostForm("remotePort"),
 				RemoteAddr: c.PostForm("remoteAddr"),
+				Whitelist: c.PostForm("whitelist"),
+				Blacklist: c.PostForm("blacklist"),
 				OutTime:    outTimeInt,
 				Protocol:   c.PostForm("protocol"),
 			}

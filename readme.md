@@ -8,16 +8,14 @@ Fork https://github.com/csznet/goForward
  - web管理面板
  - 流量统计
  - 空闲时长断开连接设置
-
+ - 端口白名单、黑名单配置
+ - 
 **截图**
 
-![image](https://github.com/xieyuhua/portforward/assets/29120060/7a9355d7-b63e-495b-808d-5c262441e159)
+![image](https://github.com/xieyuhua/port-forward/assets/29120060/834cabc3-e461-4adb-a3eb-d8220fac9f5f)
 
-```
-2024-03-18 08:17:48 【tcp】端口 1521 当前连接数: 2, 统计流量: 653.72MB
-2024-03-18 08:17:48 【1521】端口 1、  192.167.1.6:49095->192.168.9.38:1521
-2024-03-18 08:17:48 【1521】端口 2、  192.168.9.38:1521->192.167.1.6:49095
-```
+![image](https://github.com/xieyuhua/port-forward/assets/29120060/3e026b8a-22a3-41cc-bbc7-a64cc568bc94)
+
 
 **使用**
 

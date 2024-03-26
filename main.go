@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"sync"
-
 	"goForward/conf"
 	"goForward/forward"
 	"goForward/sql"
@@ -22,6 +21,8 @@ func main() {
 			RemotePort: conf.WebPort,
 			RemoteAddr: "127.0.0.1",
 			OutTime:5,
+			Blacklist:"",
+			Whitelist:"",
 			Protocol:   "udp",
 		}
 		sql.AddForward(testData)
@@ -37,6 +38,8 @@ func main() {
 				LocalPort:  forwardList[i].LocalPort,
 				RemotePort: forwardList[i].RemotePort,
 				RemoteAddr: forwardList[i].RemoteAddr,
+				Whitelist:  forwardList[i].Whitelist,
+				Blacklist:  forwardList[i].Blacklist,
 				OutTime:    forwardList[i].OutTime,
 				TotalBytes: forwardList[i].TotalBytes,
 			},

@@ -135,6 +135,8 @@ func AddForward(newForward conf.ConnectionStats) int {
 	newForward.RemoteAddr = rmSpaces(newForward.RemoteAddr)
 	newForward.RemotePort = rmSpaces(newForward.RemotePort)
 	newForward.LocalPort = rmSpaces(newForward.LocalPort)
+	newForward.Blacklist = rmSpaces(newForward.Blacklist)
+	newForward.Whitelist = rmSpaces(newForward.Whitelist)
 	if newForward.Protocol != "udp" {
 		newForward.Protocol = "tcp"
 	}

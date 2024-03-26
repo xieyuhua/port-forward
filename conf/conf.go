@@ -12,6 +12,8 @@ type ConnectionStats struct {
 	RemotePort    string
 	OutTime        int
 	Protocol      string
+	Whitelist      string
+	Blacklist      string
 	Status        int
 	TotalBytes    uint64
 	TolBytes    string

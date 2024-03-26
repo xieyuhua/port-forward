@@ -5,12 +5,12 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+    "strings"
 	"net"
 	"os"
 	"strconv"
 	"sync"
 	"time"
-
 	"goForward/conf"
 	"goForward/sql"
 )
@@ -150,6 +150,25 @@ func (cs *ConnectionStats) handleTCPConnection(wg *sync.WaitGroup, clientConn ne
 	defer wg.Done()
 	defer clientConn.Close()
 
+    // 黑百名单判断
+    srcremoteAddr := clientConn.RemoteAddr()  
+    srctcpAddr, _ := srcremoteAddr.(*net.TCPAddr)
+    
+    if cs.Whitelist != "" {
+        ok := ContainsIp(fmt.Sprintf("%v",srctcpAddr.IP), cs.Whitelist) 
+        if !ok {
+    		fmt.Println("no exsit Whitelist %v \n", srctcpAddr.IP)
+    		return
+        }
+    }
+    if cs.Blacklist != "" {
+        ok := ContainsIp(fmt.Sprintf("%v",srctcpAddr.IP), cs.Blacklist) 
+        if ok {
+    		fmt.Println("exsit Blacklist %v \n", srctcpAddr.IP)
+    		return
+        }
+    }
+
 	remoteConn, err := net.Dial("tcp", cs.RemoteAddr+":"+cs.RemotePort)
 	if err != nil {
 		fmt.Println("连接远程地址时发生错误:", err)
@@ -248,8 +267,9 @@ func (cs *ConnectionStats) copyBytes(dst, src net.Conn) {
 		if n > 0 { 
 		    cs.TotalBytesLock.Lock()
 		    cs.TCPConnections[srctcpAddrstr+"->"+dsttcpAddrstr] = &IPStruct{Time:time.Now().Unix(), TCPConnections:src}
+		   	cs.TotalBytesLock.Unlock()
 			cs.TotalBytes += uint64(n)
-			cs.TotalBytesLock.Unlock()
+		
             //写入目标
 			_, err := dst.Write(buf[:n])
 			if err != nil { 
@@ -334,7 +354,7 @@ func (cs *ConnectionStats) printStats(wg *sync.WaitGroup, ctx context.Context) {
 				    //最大空闲连接丢弃
 				    if cs.OutTime>1 && int(times-ips.Time)>cs.OutTime {
 				        ips.TCPConnections.Close()
-				        fmt.Printf("%v 【%s】端口 超时 Close %s  \n",Timestr, cs.LocalPort, index)
+				        fmt.Printf("%v 【%s】端口 超时 Close %vs  %s  \n",Timestr, cs.LocalPort, int(times-ips.Time), index)
 				        delete(cs.TCPConnections, index)
 				    }
 				}	
@@ -374,3 +394,36 @@ func releaseResources(stats *ConnectionStats) {
 	closeTCPConnections(stats)
 // 	cleanupBuffer()
 }
+
+
+// 包含ip
+func ContainsIp(ipStr string, iplist string) bool {
+	// 解析IP地址  
+	ip := net.ParseIP(ipStr)  
+	if ip == nil {  
+		return false
+	}
+	status := false 
+    strarr := strings.Split(iplist, ";")
+    for _, vv := range strarr {
+    	// 定义CIDR网段  
+    	vv = strings.ReplaceAll(vv, " ", "")
+    	_, ipNet, err := net.ParseCIDR(vv)  
+    	if err != nil {  
+    	    if vv == ipStr {
+    	        status = true
+    	        break
+    	    }else{
+    	        continue
+    	    }
+    	}
+    	// 检查IP地址是否属于CIDR网段  
+    	if ipNet.Contains(ip) {  
+    	    status = true
+    		break
+    	}
+    }
+    return status
+}
+
+
