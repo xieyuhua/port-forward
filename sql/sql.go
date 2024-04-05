@@ -1,7 +1,9 @@
 package sql
 
 import (
+	"os/exec"  
 	"fmt"
+	"bufio"  
 	"log"
 	"os"
 	"path/filepath"
@@ -110,8 +112,33 @@ func GetForward(id int) conf.ConnectionStats {
 	return get
 }
 
+// checkPortWithNetstat 使用netstat命令检查端口是否启用  
+func checkPortWithNetstat(port string) bool {  
+	cmd := exec.Command("netstat", "-tuln")  
+	output, err := cmd.Output()  
+	if err != nil {  
+		return false  
+	}  
+	scanner := bufio.NewScanner(strings.NewReader(string(output)))  
+	for scanner.Scan() {  
+		line := scanner.Text()  
+		// 查找包含指定端口号的行  
+		if strings.Contains(line, ":"+port+" ") {  
+			return true  
+		}  
+	}  
+	return false  
+}
+
+
 // 判断指定端口转发是否可添加
 func FreeForward(localPort, protocol string) bool {
+    
+    //  return false
+    if checkPortWithNetstat(localPort) {
+        return false
+    }
+    
 	var get conf.ConnectionStats
 	res := db.Model(&conf.ConnectionStats{}).Where("local_port = ? And protocol = ?", localPort, protocol).Find(&get)
 	if res.Error == nil {
@@ -137,9 +164,12 @@ func AddForward(newForward conf.ConnectionStats) int {
 	newForward.LocalPort = rmSpaces(newForward.LocalPort)
 	newForward.Blacklist = rmSpaces(newForward.Blacklist)
 	newForward.Whitelist = rmSpaces(newForward.Whitelist)
+	newForward.Protocol = rmSpaces(newForward.Protocol)
 	if newForward.Protocol != "udp" {
 		newForward.Protocol = "tcp"
 	}
+	
+	
 	if !FreeForward(newForward.LocalPort, newForward.Protocol) {
 		return 0
 	}
