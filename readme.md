@@ -9,12 +9,6 @@ Fork https://github.com/csznet/goForward
  - 流量统计
  - 空闲时长断开连接设置
  - 端口白名单、黑名单配置
- 
-**截图**
-
-![image](https://github.com/xieyuhua/port-forward/assets/29120060/834cabc3-e461-4adb-a3eb-d8220fac9f5f)
-
-![image](https://github.com/xieyuhua/port-forward/assets/29120060/3e026b8a-22a3-41cc-bbc7-a64cc568bc94)
 
 
 **使用**
