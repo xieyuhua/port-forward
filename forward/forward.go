@@ -225,8 +225,12 @@ func (cs *ConnectionStats) handleUDPConnection(wg *sync.WaitGroup, localConn *ne
 			cs.TotalBytesLock.Unlock()
 
 			// 处理消息的边界和错误情况
-			go cs.forwardUDPMessage(localConn, remoteAddr, buf[:n])
-			bufPool.Put(buf[:n])
+			//go cs.forwardUDPMessage(localConn, remoteAddr, buf[:n])
+			//bufPool.Put(buf[:n])
+            		go func() {
+			   cs.forwardUDPMessage(localConn, remoteAddr, buf[:n])
+			   bufPool.Put(&buf)
+			}()
 		}
 	}
 }
@@ -247,7 +251,8 @@ func (cs *ConnectionStats) forwardUDPMessage(localConn *net.UDPConn, remoteAddr 
 
 func (cs *ConnectionStats) copyBytes(dst, src net.Conn) {
 	buf := bufPool.Get().([]byte)
-	defer bufPool.Put(buf)
+	// defer bufPool.Put(buf)
+	defer bufPool.Put(&buf)
 	
 	
     srcremoteAddr := src.RemoteAddr()  
@@ -377,22 +382,9 @@ func closeTCPConnections(stats *ConnectionStats) {
 	stats.TCPConnections = nil // 清空切片
 }
 
-// 清理缓冲区
-func cleanupBuffer() {
-	// 如果有剩余的缓冲区，归还给池
-	for {
-		buf := bufPool.Get()
-		if buf == nil {
-			break
-		}
-		bufPool.Put(buf)
-	}
-}
-
 // 释放资源
 func releaseResources(stats *ConnectionStats) {
 	closeTCPConnections(stats)
-// 	cleanupBuffer()
 }
 
 
