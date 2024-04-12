@@ -10,6 +10,8 @@ Fork https://github.com/csznet/goForward
  - 空闲时长断开连接设置
  - 端口白名单、黑名单配置
 
+**截图**
+![image](https://github.com/xieyuhua/port-forward/assets/29120060/95671356-3a9d-4e9f-8277-e5d900401543)
 
 **使用**
 
