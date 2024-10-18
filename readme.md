@@ -12,7 +12,7 @@ Fork https://github.com/csznet/goForward
 
 
 **使用**
-![image](https://github.com/xieyuhua/port-forward/assets/29120060/95671356-3a9d-4e9f-8277-e5d900401543)
+![419e60a3365740bb38a238c02c44ead](https://github.com/user-attachments/assets/8ddfcd77-0332-435e-ac65-3a4d4c3530e9)
 
 运行
 ```
