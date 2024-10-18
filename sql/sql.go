@@ -40,6 +40,29 @@ func init() {
 }
 
 // 获取转发列表
+func GetList() []conf.ConnectionStats {
+	var res []conf.ConnectionStats
+	db.Model(&conf.ConnectionStats{}).Find(&res)
+	
+	var dealRes []conf.ConnectionStats
+	for i := range res {
+	    if strings.Contains(res[i].LocalPort,",") {
+	          LocalPorts := strings.Split(res[i].LocalPort, ",")
+	          for _,LocalPort := range LocalPorts {
+	             res[i].LocalPort = LocalPort
+	             res[i].RemotePort = LocalPort
+	             dealRes = append(dealRes, res[i])
+	          }
+	    }else{
+	        dealRes = append(dealRes, res[i])
+	    }
+	}
+	fmt.Println(dealRes)
+	return dealRes
+}
+
+
+// 获取转发列表
 func GetForwardList() []conf.ConnectionStats {
 	var res []conf.ConnectionStats
 	db.Model(&conf.ConnectionStats{}).Find(&res)
@@ -65,7 +88,22 @@ func GetForwardList() []conf.ConnectionStats {
 func GetAction() []conf.ConnectionStats {
 	var res []conf.ConnectionStats
 	db.Model(&conf.ConnectionStats{}).Where("status = ?", 0).Find(&res)
-	return res
+	
+	var dealRes []conf.ConnectionStats
+	for i := range res {
+	    if strings.Contains(res[i].LocalPort,",") {
+	          LocalPorts := strings.Split(res[i].LocalPort, ",")
+	          for _,LocalPort := range LocalPorts {
+	             res[i].LocalPort = LocalPort
+	             res[i].RemotePort = LocalPort
+	             dealRes = append(dealRes, res[i])
+	          }
+	    }else{
+	        dealRes = append(dealRes, res[i])
+	    }
+	}
+	fmt.Println(dealRes)
+	return dealRes
 }
 
 // 获取ipban列表
@@ -168,8 +206,6 @@ func AddForward(newForward conf.ConnectionStats) int {
 	if newForward.Protocol != "udp" {
 		newForward.Protocol = "tcp"
 	}
-	
-	
 	if !FreeForward(newForward.LocalPort, newForward.Protocol) {
 		return 0
 	}
