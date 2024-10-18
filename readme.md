@@ -13,6 +13,8 @@ Fork https://github.com/csznet/goForward
 
 **使用**
 ![419e60a3365740bb38a238c02c44ead](https://github.com/user-attachments/assets/8ddfcd77-0332-435e-ac65-3a4d4c3530e9)
+![image](https://github.com/user-attachments/assets/8b5fda56-543a-4faf-9800-5db04ec9cfd3)
+
 
 运行
 ```
