@@ -16,6 +16,9 @@ Fork https://github.com/csznet/goForward
 ![419e60a3365740bb38a238c02c44ead](https://github.com/user-attachments/assets/8ddfcd77-0332-435e-ac65-3a4d4c3530e9)
 ![image](https://github.com/user-attachments/assets/8b5fda56-543a-4faf-9800-5db04ec9cfd3)
 
+![image](https://github.com/xieyuhua/port-forward/assets/29120060/834cabc3-e461-4adb-a3eb-d8220fac9f5f)
+![image](https://github.com/xieyuhua/port-forward/assets/29120060/3e026b8a-22a3-41cc-bbc7-a64cc568bc94)
+
 
 运行
 ```
