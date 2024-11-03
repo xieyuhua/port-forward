@@ -10,7 +10,7 @@ Fork https://github.com/csznet/goForward
  - 空闲时长断开连接设置
  - 端口白名单、黑名单配置
  - 端口批量转发，本地端口设置，如 80,443,3306,6379
-
+ - 端口转发限速（todo）
 
 **使用**
 ![419e60a3365740bb38a238c02c44ead](https://github.com/user-attachments/assets/8ddfcd77-0332-435e-ac65-3a4d4c3530e9)
