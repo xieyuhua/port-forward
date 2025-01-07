@@ -1,5 +1,13 @@
 使用golang实现的tcp udp端口转发
 
+# 使用 iptables 配置端口转发
+ 假设我们要将外部访问的 TCP 端口 8080 转发到内网的某个服务器的 80 端口
+```
+echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf sysctl -p
+iptables -t nat -A PREROUTING -p tcp --dport 8080 -j DNAT --to-destination 192.168.1.2:80 iptables -t nat -A POSTROUTING -j MASQUERADE
+```
+
+
 Fork https://github.com/csznet/goForward
 
 目前已实现：
