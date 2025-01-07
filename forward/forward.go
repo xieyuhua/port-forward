@@ -189,19 +189,29 @@ func (cs *ConnectionStats) handleTCPConnection(wg *sync.WaitGroup, clientConn ne
 		defer copyWG.Done()
 		cs.copyBytes(remoteConn, clientConn)
 	}()
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				// 如果上级 context 被取消，停止接收新连接
-				return
-			default:
-				time.Sleep(3 * time.Second)
-			}
+	// go func() {
+	// 	for {
+	// 		select {
+	// 		case <-ctx.Done():
+	// 			// 如果上级 context 被取消，停止接收新连接
+	// 			return
+	// 		default:
+	// 			time.Sleep(3 * time.Second)
+	// 		}
+	// 	}
+	// }()
+	for {
+		select {
+		case <-ctx.Done():
+			// 如果上级 context 被取消，停止接收新连接
+			return
+		default:
+			copyWG.Wait()
+			return
 		}
-	}()
-
-	copyWG.Wait()
+	}
+	
+	//copyWG.Wait()
 }
 
 // UDP转发
